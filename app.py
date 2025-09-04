@@ -15,13 +15,15 @@ CHROMA_DIR = "chroma_db"
 # Initialize session state for chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "index_initialized" not in st.session_state:
+    st.session_state.index_initialized = False
 
 def main():
     st.title("📚 BioPro Chatbot")
     st.write("Ask questions about Dr. Magufuli's biography!")
 
-    # Index PDF if chroma_db is empty
-    if not os.path.exists(CHROMA_DIR):
+    # Index PDF only if not already initialized
+    if not st.session_state.index_initialized and not os.path.exists(CHROMA_DIR):
         pdf_files = list(PDF_FOLDER.glob("*.pdf"))
         if not pdf_files:
             st.error(f"No PDFs found in {PDF_FOLDER.resolve()}")
@@ -30,9 +32,13 @@ def main():
             for pdf_file in pdf_files:
                 st.write(f"Indexing {pdf_file.name}...")
                 build_index(str(pdf_file))
+            st.session_state.index_initialized = True
 
     # Initialize QA system
     qa = initialize_qa_system()
+    if not qa:
+        st.error("Failed to initialize QA system. Please check configuration.")
+        return
 
     # Display chat history
     for message in st.session_state.messages:
@@ -46,18 +52,15 @@ def main():
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        if qa:
-            # Get and display response
-            with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    try:
-                        response = qa.invoke({"query": prompt})["result"]
-                        st.markdown(response)
-                        st.session_state.messages.append({"role": "assistant", "content": response})
-                    except Exception as e:
-                        st.error(f"Error processing query: {str(e)}")
-        else:
-            st.error("QA system not initialized. Please check configuration.")
+        # Get and display response
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    response = qa.invoke({"query": prompt})["result"]
+                    st.markdown(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                except Exception as e:
+                    st.error(f"Error processing query: {str(e)}")
 
     # Clear chat history button
     if st.button("Clear Chat History"):
