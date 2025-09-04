@@ -1,6 +1,5 @@
 import sys
 import sqlite3
-
 # Check if we need to use pysqlite3
 if sqlite3.sqlite_version_info < (3, 35, 0):
     try:
@@ -8,8 +7,6 @@ if sqlite3.sqlite_version_info < (3, 35, 0):
         sys.modules['sqlite3'] = sqlite3
     except ImportError:
         pass
-
-
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -39,31 +36,32 @@ def build_index(pdf_path, persist_dir=CHROMA_DIR):
     """Build and persist ChromaDB index from a PDF."""
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
-
+    
     # Convert to Path object
     pdf_path_obj = Path(pdf_path)
     
     # Load PDF
     loader = PyPDFLoader(str(pdf_path_obj))
     documents = loader.load()
-
+    
     # Split into chunks
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     chunks = splitter.split_documents(documents)
-
+    
     # Create embeddings
     embeddings = GoogleGenerativeAIEmbeddings(
         model=EMBEDDING_MODEL_NAME,
         google_api_key=GOOGLE_API_KEY
     )
-
-    # Build ChromaDB
+    
+    # Build ChromaDB - persistence is automatic with persist_directory
     vectorstore = Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
         persist_directory=persist_dir
     )
-    vectorstore.persist()
+    # REMOVED: vectorstore.persist() - this method no longer exists
+    
     print(f"✅ Indexed {pdf_path_obj.name} and persisted to {persist_dir}")
     return vectorstore
 
@@ -76,14 +74,14 @@ def initialize_qa_system():
             google_api_key=GOOGLE_API_KEY
         )
         vectorstore = Chroma(persist_directory=CHROMA_DIR, embedding_function=embeddings)
-
+        
         # Load chat LLM
         llm = ChatGoogleGenerativeAI(
             model=GENERATION_MODEL_NAME,
             temperature=0,
             google_api_key=GOOGLE_API_KEY
         )
-
+        
         # Create RAG QA chain
         qa = RetrievalQA.from_chain_type(
             llm=llm,
@@ -104,7 +102,7 @@ if __name__ == "__main__":
         for pdf_file in pdf_files:
             print(f"Processing {pdf_file.name} ...")
             build_index(str(pdf_file))
-
+    
     # Test QA system
     qa = initialize_qa_system()
     if qa:
