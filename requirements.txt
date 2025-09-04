@@ -8,3 +8,4 @@ chromadb
 python-dotenv
 google-generativeai
 langchain-chroma
+pysqlite3-binary
