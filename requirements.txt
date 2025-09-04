@@ -7,4 +7,4 @@ pypdf
 chromadb
 python-dotenv
 google-generativeai
-
+langchain-chroma
