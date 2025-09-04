@@ -7,9 +7,6 @@ chroma_db/
 # Environment variables
 .env
 
-# PDF files (optional, include if dr_magufuli.pdf contains sensitive data)
-pdfs/
-
 # Python cache
 __pycache__/
 *.pyc
